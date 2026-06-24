@@ -12,23 +12,30 @@ This project is the core source code of our award-winning work. It implements a 
 
 ## 🌟 核心系统架构 / System Architecture
 
-整个系统采用全栈端到端架构，包含数据感知、模型训练、后端汇聚、可视化监控及移动端报警五大部分：
+整个系统采用全栈端到端从物理层信号到应用层的闭环架构，其核心信号处理与决策流程如下图所示：
 
-1. **射频感知端 (ESP32 Nodes)**: 基于 C++ (ESP-IDF/Arduino) 开发，发射端高频发送探测数据包，接收端提取子载波 CSI 复数矩阵并以 UDP/Websocket 格式向边缘网关推送。
-2. **深度学习训练端 (AI Training)**: 使用 PyTorch 框架，实现 CSI 数据的带阻滤波、PCA降维等预处理，并训练轻量化时空卷积神经网络 (CNN/GRU) 对“跌倒”、“行走”、“坐下”、“躺下”等动作进行高精度分类。
-3. **数据处理后端 (Windows Server)**: 采用 Python FastAPI/Flask，高频解析 UDP 原始数据包，进行滑窗滤波和特征提取，载入 PyTorch 模型实现厘米级超低延迟的在线跌倒决策。
-4. **可视化监控终端 (Frontend Dashboard)**: 采用 Vanilla JS + ECharts 实时渲染子载波幅值变化波形、动作预测分类概率和设备在线状态。
-5. **移动报警小程序 (Mobile App)**: 开发配套的微信小程序，当发生跌倒事件时，通过网络接口发送高优先级微信模板消息推送，实现一秒级家属预警响应。
+![System Architecture](images/wifi_csi_architecture.png)
+
+系统核心由以下五大部分组成：
+1. **射频感知端 (ESP32 Nodes)**: 基于 C++ (ESP-IDF/Arduino) 开发，发射端以 100Hz 高频发送探测数据包，接收端提取子载波 CSI 复数矩阵并以 UDP/Websocket 格式向边缘网关推送。
+2. **边缘计算数据处理后端 (Windows Server)**: 采用 Python FastAPI，高频解析 UDP 原始数据包，进行基线校准、Hampel 滤波和 EMA 平滑，提取 27 维特征，实现厘米级超低延迟的在线推理。
+3. **深度学习模型 (AI Training)**: 基于多层感知机 (MLP) 及轻量化时空神经网络，对“跌倒”、“行走”、“坐下”、“无人”等动作进行高精度分类。
+4. **可视化监控终端 (Frontend Dashboard)**: 基于 Vue.js 渲染的 Web 大屏，实时反映子载波能量感知矩阵（真实方差）、物理层实时反射波形以及联合 AI 决策状态。
+5. **移动报警小程序 (Mobile App)**: 开发配套的移动端应用，在检测到跌倒异常时，第一时刻接收高优先级预警推送与边缘计算实时日志。
 
 ---
 
-## 📊 信号波形与实时监护效果 / CSI Waveforms & Visualizations
+## 📊 实时监护与跌倒预警效果展示 / System Visualizations & Test Environment
 
-项目通过 WiFi CSI 射频波形捕捉人体空间扰动，结合深度学习进行姿态判定，以下是采集到的时序信号波形与检测系统界面：
+项目实现了免穿戴的非接触式跌倒检测，以下是系统在真实场景中的测试照片、Web 仪表盘（无人/报警状态）以及移动端小程序报警界面：
 
-| 实测人体活动引起的 WiFi CSI 载波幅值扰动波形 | 基于 ECharts 的 CSI 信号滤波与跌倒预警 Web 仪表盘 |
+| 1. 真实跌倒检测场景实测 (人因跌倒躺地) | 2. 移动端小程序高优先级告警界面 |
 | :---: | :---: |
-| ![WiFi CSI Waveform](images/wifi_csi_waveform.png) | ![WiFi CSI Sensing Visual](images/wifi_csi_sensing_visual.png) |
+| ![Real Test Environment](images/wifi_csi_real_test.jpg) | ![Mobile App Alarm](images/wifi_csi_mobile_app.jpg) |
+
+| 3. Web 监控终端 - 无人环境状态 | 4. Web 监控终端 - 跌倒异常报警状态 |
+| :---: | :---: |
+| ![Web Dashboard Empty](images/wifi_csi_dashboard_empty.jpg) | ![Web Dashboard Alarm](images/wifi_csi_dashboard_alert.png) |
 
 ---
 
