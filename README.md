@@ -22,6 +22,16 @@ This project is the core source code of our award-winning work. It implements a 
 
 ---
 
+## 📊 信号波形与实时监护效果 / CSI Waveforms & Visualizations
+
+项目通过 WiFi CSI 射频波形捕捉人体空间扰动，结合深度学习进行姿态判定，以下是采集到的时序信号波形与检测系统界面：
+
+| 实测人体活动引起的 WiFi CSI 载波幅值扰动波形 | 基于 ECharts 的 CSI 信号滤波与跌倒预警 Web 仪表盘 |
+| :---: | :---: |
+| ![WiFi CSI Waveform](images/wifi_csi_waveform.png) | ![WiFi CSI Sensing Visual](images/wifi_csi_sensing_visual.png) |
+
+---
+
 ## 📂 项目结构 / Directory Structure
 
 ```text
