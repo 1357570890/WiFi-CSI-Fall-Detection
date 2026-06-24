@@ -1,0 +1,91 @@
+<view class="app-container">
+  <!-- 赛博朋克风格的环境光背景 -->
+  <view class="bg-glow bg-glow-1"></view>
+  <view class="bg-glow bg-glow-2"></view>
+
+  <!-- ================= 监护大厅 Tab ================= -->
+  <view class="tab-content {{currentTab === 'monitor' ? 'active' : ''}}">
+    <!-- 顶部状态栏 -->
+    <view class="header">
+      <view class="title-container">
+        <text class="title">CSI.AI 银发照护</text>
+        <text class="subtitle">动态自适应全息网络</text>
+      </view>
+      <view class="status-badge {{isConnected ? 'connected' : 'disconnected'}}">
+        <view class="dot"></view>
+        <text>{{isConnected ? '算力节点已连接' : '节点已离线'}}</text>
+      </view>
+    </view>
+
+    <!-- 核心雷达状态环 (带呼吸动画) -->
+    <view class="status-ring-container status-ring-{{statusCode}}">
+      <view class="pulse-ring"></view>
+      <view class="status-circle">
+        <text class="status-icon">{{statusCode === -1 ? '📡' : (statusCode === 0 ? '🏠' : (statusCode === 1 ? '🪑' : (statusCode === 2 ? '🚶' : '🚨')))}}</text>
+        <text class="status-value">{{currentStatus}}</text>
+      </view>
+    </view>
+    
+
+
+    <!-- 毛玻璃日志卡片 -->
+    <view class="card glass-card">
+      <text class="card-title">边缘计算实时日志</text>
+      <scroll-view class="log-list" scroll-y="true">
+        <view class="log-item" wx:for="{{logs}}" wx:key="index">
+          <text class="log-time">{{item.time}}</text>
+          <text class="log-msg">{{item.msg}}</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- ================= 系统设置 Tab ================= -->
+  <view class="tab-content {{currentTab === 'settings' ? 'active' : ''}}">
+    <view class="header">
+      <view class="title-container">
+        <text class="title">系统设置</text>
+        <text class="subtitle">Preferences</text>
+      </view>
+    </view>
+
+    <view class="card glass-card settings-card">
+      <view class="setting-item">
+        <text>算力网关 WebSocket IP</text>
+        <input class="setting-input" value="{{wsUrl}}" bindinput="onUrlInput" />
+      </view>
+      <view class="setting-item">
+        <text>跌倒物理震动报警</text>
+        <switch checked="{{vibrateEnabled}}" color="#10b981" bindchange="onVibrateChange"/>
+      </view>
+      <view class="setting-item">
+        <text>千问 LLM 短信推送</text>
+        <switch checked="true" color="#10b981" />
+      </view>
+      <view class="setting-item">
+        <text>自动断线重连</text>
+        <switch checked="{{autoReconnect}}" color="#10b981" bindchange="onAutoReconnectChange"/>
+      </view>
+      <view class="setting-item" wx:if="{{autoReconnect}}">
+        <text>重连间隔 (秒)</text>
+        <input class="setting-input" type="number" value="{{reconnectInterval}}" bindinput="onIntervalInput" style="width: 80px; text-align: center;" />
+      </view>
+      
+      <button class="btn-primary" bindtap="reconnect">保存并重新连接网关</button>
+    </view>
+    
+    <!-- 🎛️ HW Override Removed -->
+  </view>
+
+  <!-- ================= 悬浮式毛玻璃底部导航栏 ================= -->
+  <view class="floating-tabbar glass-card">
+    <view class="tab-item {{currentTab === 'monitor' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="monitor">
+      <text class="tab-icon">📡</text>
+      <text class="tab-text">实时监护</text>
+    </view>
+    <view class="tab-item {{currentTab === 'settings' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="settings">
+      <text class="tab-icon">⚙️</text>
+      <text class="tab-text">引擎设置</text>
+    </view>
+  </view>
+</view>

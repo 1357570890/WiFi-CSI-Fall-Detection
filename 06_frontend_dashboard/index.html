@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>基于分布式 Wi-Fi 感知的适老化全息照护系统</title>
+    <script src="./libs/vue.global.js"></script>
+    <script src="./libs/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #030a16;
+            --panel-bg: rgba(16, 25, 45, 0.7);
+            --border-color: rgba(0, 229, 255, 0.2);
+            --text-main: #e0f2fe;
+            --node-a: #10b981;
+            /* 绿 */
+            --node-b: #00e5ff;
+            /* 蓝 */
+            --node-c: #a855f7;
+            /* 紫 */
+            --target-red: #ef4444;
+            /* 红 */
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05) 0%, transparent 60%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 15px 25px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* --- Header 区域 --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            border-bottom: 2px solid var(--border-color);
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40%;
+            height: 2px;
+            background: var(--node-b);
+            box-shadow: 0 0 15px var(--node-b);
+        }
+
+        .header-title {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            background: linear-gradient(180deg, #ffffff, #00e5ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            text-align: center;
+        }
+
+        .node-status-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .node-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .dot.a {
+            color: var(--node-a);
+            background: var(--node-a);
+        }
+
+        .dot.b {
+            color: var(--node-b);
+            background: var(--node-b);
+        }
+
+        .dot.c {
+            color: var(--node-c);
+            background: var(--node-c);
+        }
+
+        .dot.offline {
+            color: #555;
+            background: #555;
+            animation: none;
+            box-shadow: none;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        /* --- 主体布局 --- */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 700px;
+        }
+
+        .panel-glass {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .panel-glass::before,
+        .panel-glass::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border: 2px solid var(--node-b);
+        }
+
+        .panel-glass::before {
+            top: -1px;
+            left: -1px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .panel-glass::after {
+            bottom: -1px;
+            right: -1px;
+            border-left: none;
+            border-top: none;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--node-b);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .panel-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background: var(--node-b);
+            margin-right: 10px;
+        }
+
+        /* 左侧列：雷达 + 波形 */
+        .left-col {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 400px;
+        }
+
+        .radar-box {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            min-height: 250px;
+        }
+
+        #radarChart {
+            width: 100%;
+            flex: 1;
+            min-height: 200px;
+        }
+
+        .wave-box {
+            flex: 5;
+            display: flex;
+            flex-direction: column;
+            min-height: 300px;
+        }
+
+        #waveChart {
+            width: 100%;
+            flex: 1;
+            min-height: 250px;
+        }
+
+        /* 中间列：决策中枢 */
+        .center-col {
+            flex: 3;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .core-ring {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .core-ring::before,
+        .core-ring::after {
+            content: '';
+            position: absolute;
+            inset: -20px;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .core-ring::before {
+            animation: spin 15s linear infinite;
+        }
+
+        .core-ring::after {
+            inset: -40px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            animation: spin-reverse 25s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spin-reverse {
+            100% {
+                transform: rotate(-360deg);
+            }
+        }
+
+        .status--1 {
+            background: radial-gradient(circle, rgba(139, 160, 178, 0.1) 0%, transparent 70%);
+            border: 4px dashed #8ba0b2;
+            opacity: 0.5;
+        }
+
+        .status-0 {
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border: 4px solid #8ba0b2;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .status-1 {
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
+            border: 4px solid var(--node-b);
+            box-shadow: 0 0 60px rgba(0, 229, 255, 0.5);
+        }
+
+        .status-2 {
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+            border: 4px solid var(--node-a);
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.3);
+        }
+
+        .status-3 {
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+            border: 4px solid var(--target-red);
+            box-shadow: 0 0 80px rgba(239, 68, 68, 0.6);
+            animation: pulse-danger 0.5s infinite;
+        }
+
+        .core-icon {
+            font-size: 70px;
+            margin-bottom: 5px;
+        }
+
+        .core-text {
+            font-size: 28px;
+            font-weight: 900;
+            text-align: center;
+        }
+
+        /* 右侧列：日志 */
+        .right-col {
+            flex: 3;
+        }
+
+        .logs-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: var(--node-b);
+            border-radius: 4px;
+        }
+
+        .log-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--node-b);
+            margin-bottom: 10px;
+            padding: 10px 12px;
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .log-item.danger {
+            border-left-color: var(--target-red);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-time {
+            font-family: monospace;
+            font-size: 11px;
+            color: #8ba0b2;
+        }
+
+        .log-msg {
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+
+
+        <style>
+
+        /* UI Cleaned */
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header>
+            <div style="flex:1">
+                <div class="header-title" style="text-align: left; font-size: 26px;">Wi-Fi 适老化无感照护终端</div>
+            </div>
+            <div class="node-status-group" style="flex:1; justify-content: center;">
+                <div class="node-badge">
+                    <div class="dot" :class="(isOnline && activeNodes >= 1) ? 'a' : 'offline'"></div> Node A
+                </div>
+                <div class="node-badge">
+                    <div class="dot" :class="(isOnline && activeNodes >= 2) ? 'b' : 'offline'"></div> Node B
+                </div>
+                <div class="node-badge">
+                    <div class="dot" :class="(isOnline && activeNodes >= 3) ? 'c' : 'offline'"></div> Node C
+                </div>
+            </div>
+            <div style="flex:1; text-align: right; color: var(--node-b); font-family: monospace; font-size: 18px;">
+                {{ currentTime }}
+            </div>
+        </header>
+
+        <!-- HW Override Panel Removed -->
+
+        <div class="main-layout">
+            <!-- 左侧：能量感知与真实波形 -->
+            <div class="left-col">
+                <div class="panel-glass radar-box">
+                    <div class="panel-title">三通道空间能量感知矩阵 (真实方差)</div>
+                    <div id="radarChart"></div>
+                </div>
+                <div class="panel-glass wave-box">
+                    <div class="panel-title">物理层真实反射波形 (商谱零中值)</div>
+                    <div id="waveChart"></div>
+                </div>
+            </div>
+
+            <!-- 中间：核心状态 -->
+            <div class="panel-glass center-col">
+                <div class="panel-title" style="position: absolute; top: 15px; left: 15px;">联合 AI 决策中枢</div>
+                <div :class="['core-ring', 'status-' + statusCode]">
+                    <div class="core-icon">{{ statusCode === -1 ? '📡' : (statusCode === 0 ? '🏠' : (statusCode === 1 ?
+                        '🪑' : (statusCode === 2 ? '🚶' : '🚨'))) }}</div>
+                    <div class="core-text" :style="{color: statusCode===3 ? '#ef4444' : '#fff', fontSize: '24px'}">{{
+                        statusText }}</div>
+                </div>
+                <div v-if="statusCode === 3"
+                    style="margin-top: 20px; font-size: 24px; color: #ef4444; font-weight: bold; text-shadow: 0 0 10px #ef4444; animation: pulse-danger 0.5s infinite;">
+                    &gt;&gt;&gt; 警报：发生严重跌倒 &lt;&lt;&lt;
+                </div>
+
+            </div>
+
+            <!-- 右侧：日志 -->
+            <div class="panel-glass right-col">
+                <div class="panel-title">全域态势感知日志</div>
+                <div class="logs-container">
+                    <div class="log-item" :class="{danger: log.code === 2}" v-for="(log, idx) in logs" :key="idx">
+                        <span class="log-time">{{ log.time }}</span>
+                        <span class="log-msg">{{ log.msg }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+        createApp({
+            setup() {
+                const isOnline = ref(false);
+                const activeNodes = ref(0);
+                const statusText = ref("等待 1~3Rx 接入...");
+                const statusCode = ref(-1);
+                const logs = ref([]);
+                const currentTime = ref("");
+
+
+                let radarChart = null;
+                let waveChart = null;
+                let ws = null;
+
+                let targetAngle = 0;
+                let targetRadius = 0;
+
+                const updateTime = () => {
+                    const now = new Date();
+                    currentTime.value = now.toLocaleDateString() + ' ' + now.toLocaleTimeString('en-US', { hour12: false });
+                };
+
+                const addLog = (msg, code) => {
+                    const d = new Date();
+                    const ms = d.getMilliseconds().toString().padStart(3, '0');
+                    logs.value.unshift({ time: `${d.toLocaleTimeString()}.${ms}`, msg, code });
+                    if (logs.value.length > 50) logs.value.pop();
+                };
+
+                const initEnergyChart = () => {
+                    radarChart = echarts.init(document.getElementById('radarChart'));
+                    const option = {
+                        grid: { left: '10%', right: '10%', bottom: '15%', top: '15%' },
+                        tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,0.8)', textStyle: { color: '#fff' } },
+                        xAxis: { type: 'category', data: ['Node A', 'Node B', 'Node C'], axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { color: '#8ba0b2', fontSize: 14 } },
+                        yAxis: { type: 'value', min: 0, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#8ba0b2' } },
+                        series: [{
+                            type: 'bar',
+                            data: [
+                                { value: 0, itemStyle: { color: '#10b981', borderRadius: [5, 5, 0, 0] } },
+                                { value: 0, itemStyle: { color: '#00e5ff', borderRadius: [5, 5, 0, 0] } },
+                                { value: 0, itemStyle: { color: '#a855f7', borderRadius: [5, 5, 0, 0] } }
+                            ],
+                            barWidth: '40%'
+                        }]
+                    };
+                    radarChart.setOption(option);
+                };
+
+                const initWave = () => {
+                    waveChart = echarts.init(document.getElementById('waveChart'));
+                    const option = {
+                        grid: { left: '3%', right: '3%', bottom: '5%', top: '10%', containLabel: true },
+                        tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,0.8)', textStyle: { color: '#fff' } },
+                        xAxis: { type: 'category', data: Array.from({ length: 100 }, (_, i) => i + 1), axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLabel: { show: false } },
+                        yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisLabel: { color: '#8ba0b2' } },
+                        series: [
+                            { name: 'Channel A', type: 'line', smooth: 0.3, symbol: 'none', lineStyle: { color: '#10b981', width: 2 }, data: Array(100).fill(0) },
+                            { name: 'Channel B', type: 'line', smooth: 0.3, symbol: 'none', lineStyle: { color: '#00e5ff', width: 2 }, data: Array(100).fill(0) },
+                            { name: 'Channel C', type: 'line', smooth: 0.3, symbol: 'none', lineStyle: { color: '#a855f7', width: 2 }, data: Array(100).fill(0) }
+                        ]
+                    };
+                    waveChart.setOption(option);
+                };
+
+                // 相关方法已移除
+
+                const connectWs = () => {
+                    const host = window.location.hostname || "127.0.0.1";
+                    ws = new WebSocket(`ws://${host}:8000/ws`);
+                    ws.onopen = () => {
+                        isOnline.value = true;
+                        addLog("✔️ 系统握手成功，动态感知矩阵上线", 0);
+                    };
+                    ws.onclose = () => {
+                        isOnline.value = false;
+                        statusText.value = "等待 1~3Rx 接入..."; statusCode.value = -1; activeNodes.value = 0;
+                        setTimeout(connectWs, 3000);
+                    };
+                    ws.onmessage = (event) => {
+                        window._lastWsTime = Date.now();
+                        const data = JSON.parse(event.data);
+
+                        // ---------------------------------
+
+                        activeNodes.value = data.active_nodes || 0;
+
+                        if (statusCode.value !== data.status_code) {
+                            if (data.status_code === -1) {
+                                addLog(`⚠️ 所有节点断线，系统进入休眠待机`, 0);
+                            } else {
+                                addLog(`多节点融合判定更新: ${data.status}`, data.status_code);
+                                if (data.status_code === 3) {
+                                    addLog(`🚨 联合验证确认：发生严重跌倒！`, 2);
+                                } else if (data.status_code === 1) {
+                                    addLog(`💤 目标进入静息态，系统自动切换至微波探测模式。`, 1);
+                                }
+                            }
+                        }
+
+                        statusText.value = data.status;
+                        statusCode.value = data.status_code;
+
+                        // 注入真实波形数据
+                        if (data.waveforms && waveChart) {
+                            let waveA = [], waveB = [], waveC = [];
+                            let nodes = Object.keys(data.waveforms).sort();
+                            if (nodes.length > 0) waveA = data.waveforms[nodes[0]];
+                            if (nodes.length > 1) waveB = data.waveforms[nodes[1]];
+                            if (nodes.length > 2) waveC = data.waveforms[nodes[2]];
+
+                            waveChart.setOption({
+                                xAxis: { data: Array.from({ length: Math.max(waveA.length, 100) }, (_, i) => i + 1) },
+                                series: [{ data: waveA }, { data: waveB }, { data: waveC }]
+                            });
+                        }
+
+                        // 注入真实方差能量数据
+                        if (data.energies && radarChart) {
+                            let engA = 0, engB = 0, engC = 0;
+                            let nodes = Object.keys(data.energies).sort();
+                            if (nodes.length > 0) engA = data.energies[nodes[0]];
+                            if (nodes.length > 1) engB = data.energies[nodes[1]];
+                            if (nodes.length > 2) engC = data.energies[nodes[2]];
+
+                            radarChart.setOption({
+                                series: [{
+                                    data: [
+                                        { value: engA, itemStyle: { color: '#10b981', borderRadius: [5, 5, 0, 0] } },
+                                        { value: engB, itemStyle: { color: '#00e5ff', borderRadius: [5, 5, 0, 0] } },
+                                        { value: engC, itemStyle: { color: '#a855f7', borderRadius: [5, 5, 0, 0] } }
+                                    ]
+                                }]
+                            });
+                        }
+                    };
+                    ws.onerror = () => { isOnline.value = false; };
+                };
+
+                onMounted(() => {
+                    updateTime();
+                    setInterval(updateTime, 1000);
+                    initEnergyChart();
+                    initWave();
+                    connectWs();
+
+                    // 固定物理布局尺寸，避免控制台开闭等操作引起重绘
+                    const appEl = document.getElementById('app');
+                    appEl.style.width = window.innerWidth + 'px';
+                    appEl.style.height = window.innerHeight + 'px';
+                    appEl.style.minHeight = 'unset';
+
+                    // 固定图表渲染尺寸，避免由于页面重绘导致的性能损耗
+                    // window.addEventListener('resize', () => { radarChart?.resize(); waveChart?.resize(); });
+
+                    // Backdoor Removed
+
+                });
+
+                onUnmounted(() => {
+                    if (ws) ws.close();
+                });
+
+                return {
+                    isOnline, activeNodes, statusText, statusCode, logs, currentTime
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
